@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="/socket.io/socket.io.js"></script>
+<style>
+	div#holder {
+		align-items: left;
+		margin: auto;
+		background-color:black;
+		opacity:0.5;}
+	#alert{ 
+		margin-left: auto;
+		margin-right: auto;
+		display:block;
+		opacity: 0.8;}
+	p {
+		-webkit-text-stroke:1px black; 
+		font-family: sans-serif; 
+		color: white;
+		font-size: 40px;
+		text-align: left;
+		opacity:1;
+		}
+	p span {
+		font-weight:bolder;
+	}
+</style>
+</head>
+<body>
+<div id='holder'>
+</div>
+<script type='text/javascript'>
+	var socket = io();
+	
+	var holder = document.getElementById('holder');
+	
+	var users = [];
+	
+	var colours = ['red','green','blue','yellow','purple','orange','brown','pink','gray'];
+	
+	socket.on('chat',function(msg){
+		var p = document.createElement("p");
+		p.innerHTML = msg;
+		var user = p.getElementsByTagName('span')[0];
+		if (user.innerHTML in users){
+			user.setAttribute('style','color:'+colours[users.findIndex(element => element=user.innerHTML)%colours.length]);
+		} else {
+			users[users.length] = user.innerHTML;
+			user.setAttribute('style','color:'+colours[users.findIndex(element => element = user.innerHTML)%colours.length]);
+		}
+		holder.appendChild(p);
+		setTimeout(function(){
+			p.remove();
+		},20000);
+	});
+</script>
+</body>
+</html>

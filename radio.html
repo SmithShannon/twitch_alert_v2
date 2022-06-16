@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="/socket.io/socket.io.js"></script>
+<style>
+	div#holder {
+		margin: auto;
+		background-color:black;
+		opacity:0.5;
+		border-color:white;
+		border-style:solid;}
+	p {
+		font-family: sans-serif; 
+		color: white;
+		font-size: 40px;
+		text-align: left;
+		}
+</style>
+</head>
+<body>
+<div id='holder'>
+</div>
+<script type='text/javascript'>
+	var socket = io();
+	
+	var holder = document.getElementById('holder');
+	
+	function next (){
+		socket.emit('request_song');
+	}
+	
+	socket.on('receive_song',function(msg){
+		holder.innerHTML = msg;
+		m = document.getElementById('music');
+		m.onended = next;
+		m.play();
+	});
+	socket.emit('request_song');
+</script>
+</body>
+</html>
