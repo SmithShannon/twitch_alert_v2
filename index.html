@@ -21,6 +21,7 @@
 </head>
 <body>
 <div id="holder"></div>
+<div id='error'></div>
 <script>
 
 var socket = io();
@@ -44,6 +45,7 @@ function next (){
 }
 
 socket.on('alert',function(msg){
+	//document.getElementById('error').innerHTML = msg;
 	queue.push(msg);
 	if (!busy){
 		next();

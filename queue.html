@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="/socket.io/socket.io.js"></script>
+<style>
+	body{
+		opacity:0.5;
+		background-color:yellow;
+	}
+	div#holder {
+		align-items: left;
+		margin: auto;
+		background-color:maroon;
+		}
+
+	p {
+		-webkit-text-stroke:1px maroon; 
+		font-family: sans-serif; 
+		color: yellow;
+		font-size: 40px;
+		text-align: left;
+		opacity:1;
+		}
+	p span {
+		font-weight:bolder;
+	}
+	
+	p span.name{
+		font-weight:bolder;
+	}
+	p span level{
+		font-weight:bold;
+	}
+	
+	input#next {
+		background-color:yellow;
+		border:none;
+		color:maroon;
+		text-align:center;
+		display:inline-block;
+		font-size:40px;
+	}
+	
+	input#close {
+		background-color:yellow;
+		border:none;
+		color:maroon;
+		text-align:center;
+		display:inline-block;
+		font-size:40px;
+	}
+</style>
+</head>
+<body>
+<p>Type !add followed by the maker id</p>
+<div id='holder'>
+<p>Queue is clear!</p>
+</div>
+<input id='next' type='button' value="No more after this." onclick='next();'/>
+<input id='close' type='button' value="Queue is open." onclick='close_queue();'/>
+<script type='text/javascript'>
+	var socket = io();
+	
+	var holder = document.getElementById('holder');
+	
+	var queue = [];
+	
+	var button = document.getElementById('next');
+	
+	var open = true;
+	
+	socket.on('add',function(msg){
+		var p = document.createElement("p");
+		p.innerHTML = msg;
+		var name = p.getElementsByClassName('name')[0].innerHTML;
+		if (open){
+			p.innerHTML = msg;
+			console.log(queue.length);
+			if (queue.length == 0){
+				holder.innerHTML = "";
+				holder.appendChild(p);
+			} else if (queue.length == 1){
+				button.value = 'Next: '+p.getElementsByClassName('name')[0].innerHTML;
+			} 
+			queue[queue.length] = p;
+			socket.emit('add_message',name+", your level has been added to the queue.");
+		} else {
+			socket.emit('add_message',"Sorry "+name+", the queue is closed.");
+		}
+		
+
+	});
+	
+	function close_queue(){
+		console.log('close');
+		open = false;
+		document.getElementById('close').value = "Queue is closed";
+	}
+	
+	function next(){
+		if (queue.length != 0){
+			queue.shift();
+			if (queue.length == 0){
+				holder.innerHTML = "Queue is clear!";
+
+			} else {
+				holder.innerHTML = "";
+				holder.append(queue[0]);
+			}
+			button.value = ((queue.length > 1) ? "Next: "+queue[0].getElementsByClassName('name')[0].innerHTML : "No more after this.");
+		} else {
+			holder.innerHTML = "<p>Queue is clear!</p>";
+		}
+	}
+	
+</script>
+</body>
+</html>

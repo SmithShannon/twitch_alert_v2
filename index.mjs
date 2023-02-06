@@ -9,6 +9,7 @@ import fs from 'fs';
 import path from 'path';
 import money from 'money';
 import bodyParser from 'body-parser';
+import translate from '@google-cloud/translate'
 
 let app = express();
 let router = express.Router();
@@ -63,7 +64,7 @@ function onMessageHandler(target,context,msg,self){
 	///console.log(msg);
 	//console.log(self);
 	
-	let commandName = msg.trim();
+	let commandName = msg.split(" ")[0];
 	
 	if (commandName == '!discord'){
 		client.say(target,"Join the discord at: https://discord.gg/2er2ss6pTg and hang with Mikodite and co after stream!");
@@ -95,6 +96,9 @@ function onMessageHandler(target,context,msg,self){
 		client.say(target,"It is "+time.getHours()+":"+time.getMinutes()+" Where Mikodite is.  Timezone is Eastern Standard Time (GMT-5).  Daylight savings is observed when applicable.");
 	} else if (commandName=='!command'){
 		client.say(target,"!discord - displays the link to the discord server.  !donate - brings up the links for donating.  !time - displays what time it is for Mikodite.  !lurk/!unlurk - sets that you are lurking/stopped lurking in chat.")
+	} else if (commandName=='!add'){
+		console.log(msg.split(" ")[1]);
+		io.emit('add',"<span class='name'>"+context['display-name']+"</span> <span class='level'>"+msg.split(" ")[1]+"</span>");
 	} else {
 		counter++;
 
@@ -112,7 +116,7 @@ function onConnectedHandler (addr, port) {
   client.say("#mikodite_yvette","Hello and welcome to the chat.  Type !command to learn the chat commands.  Mikodite does read chat so don't be afriad to say hello if you are not lurking.  Thank you and have fun!");
   setInterval(function (){
   	counter ++;
-		switch (counter%6){
+		switch (counter%7){
 			case 0:
 				client.say ('#mikodite_yvette',"Hello and welcome to the chat.  Type !command to learn the chat commands.  Mikodite does read chat so don't be afriad to say hello if you are not lurking.  Thank you and have fun!");
 			break;
@@ -129,6 +133,25 @@ function onConnectedHandler (addr, port) {
 			break;
 			case 5:
 				client.say('#mikodite_yvette',"If you like what you are watching remember to give a follow if you haven't already.  Follows are free.");
+			break;
+			case 6:
+				let n = Math.floor(Math.random()*10);
+				switch (n){
+					case 0:
+						client.say('#mikodite_yvette',"Like to buy Mikodite a tea? https://buy.stripe.com/3cs28x1980wz5MYaEE An alert will play.  Note that financial support is appreciated, but not compulsery.");
+					break;
+					case 1:
+						client.say('#mikodite_yvette',"Want to buy Mikodite a beer? https://buy.stripe.com/28oeVj8BAa79fnydQR An alert will play.  Note that financial support is appreciated, but not compulsery.");
+					break;
+					case 2:
+						client.say('#mikodite_yvette',"Would you like to feed Mikodite? https://buy.stripe.com/8wMbJ70540wzfny5km An alert will play.  Note that financial support is appreciated, but not compulsery.");
+					break;
+					case 3:
+						client.say('#mikodite_yvette',"Want to buy Mikodite a Switch Game? https://buy.stripe.com/8wMbJ70540wzfny5km An alert will play.  Note that financial support is appreciated, but not compulsery.");
+					break;
+					case 4:
+						client.say('#mikodite_yvette',"Would you like to support the channel financially? https://ko-fi.com/mikoditeyvette An alert will play.  Note that financial support is appreciated, but not compulsery.");
+					break;}
 			break;
 		}
 	},900000);
@@ -188,6 +211,12 @@ app.get('/radio',(req,res) =>{
 	res.sendFile(__dirname + '/radio.html');
 });
 
+app.get('/queue',(req,res) =>{
+	console.log("QUEUE");
+	console.log(req.url);
+	res.sendFile(__dirname + '/queue.html');
+});
+
 app.post('/webhooks',(req,res) => {
 	console.log("WEBHOOK");
 	let username = "";
@@ -195,6 +224,7 @@ app.post('/webhooks',(req,res) => {
 	let type = "";
 	let message = "";
 	let data = req.body;
+	console.log(req);
 	
 	if (req.headers['user-agent'].includes("Stripe/1.0")){
 		console.log('Stripe');
@@ -212,6 +242,62 @@ app.post('/webhooks',(req,res) => {
 	}
 	//console.log(data);
 	switch (type) {
+		case 'channel.subscribe':
+			console.log('subscribe!')
+			username = data.event.user_name;
+			if (data.event.tier=='1000'){
+				media = "\"<audio "
+					+ "id='alert' "
+					+ "src='/media/single_month_prime_sub.mp3' "
+					+ "type='audio/mp3' "
+					+ "></audio>"
+					+ "<p>Praise "+username+" has subscribed, and is supporting the channel now.</p>\"";
+				message = "Praise "+username+" to the family!  They have subscribed at T1.";
+			} else {
+				media = "\"<audio "
+					+ "id='alert' "
+					+ "src='/media/gift_mulitmonth_sub.mp3' "
+					+ "type='audio/mp3' "
+					+ "></audio>"
+					+ "<p>Long Live "+username+", blessing Mikodite with their bounty of generousity and support!</p>\"";
+				message = "Long Live "+username+" for!  They have subscribed at T"+data.event.tier.substring(0,1)+".";
+			}
+		break;
+		case 'channel.subscription.gift':
+			username = data.event.is_annoymous ? "an annoymous user" : data.event.user_name;
+			media = "\"<audio "
+					+ "id='alert' "
+					+ "src='/media/gift_mulitmonth_sub.mp3' "
+					+ "type='audio/mp3' "
+					+ "></audio>"
+					+ "<p>Long Live "+username+", blessing Mikodite and spreading the love around!</p>\"";
+				message = "Long Live "+username+" for they have gifted "+data.event.total+" subs.";
+		break;
+		case 'channel.subscription.message':
+			console.log('subscribe!')
+			username = data.event.user_name;
+			text = data.event.message.text;
+			emojis = data.event.message.emojis;
+			if (data.event.tier=='1000'){
+				media = "\"<audio "
+					+ "id='alert' "
+					+ "src='/media/single_month_prime_sub.mp3' "
+					+ "type='audio/mp3' "
+					+ "></audio>"
+					+ "<p>Praise "+username+" has subscribed, and is supporting the channel now.</p>"
+					+ "<p>"+getEmojis(text,emojis)+"</p>\"";
+				message = "Praise "+username+" to the family!  They have subscribed at T1.";
+			} else {
+				media = "\"<audio "
+					+ "id='alert' "
+					+ "src='/media/gift_multimonth_sub.mp3' "
+					+ "type='audio/mp3' "
+					+ "></audio>"
+					+ "<p>Long Live "+username+", blessing Mikodite with their bounty of generousity and support!</p>"
+					+ "<p>"+getEmojis(text,emojis)+"</p>\"";
+				message = "Long Live "+username+" for!  They have subscribed at T"+data.event.tier.substring(0,1)+".";
+			}
+		break;
 		case 'channel.follow':
 			console.log('follow!')
 			username = data.event.user_name;
@@ -283,6 +369,65 @@ app.post('/webhooks',(req,res) => {
 				+ "type='audio/mp3' "
 				+ "> </audio>"
 				+ "<p>"+username+" has returned.</p>\"";
+	    	break;
+	    	case 'channel.channel_points_custom_reward_redemption.add':
+	    		console.log('channel_point redemption');
+	    		console.log(data.event.reward.title);
+	    		switch (data.event.reward.title){
+	    			case 'I see London, I see France...':
+					   	media = "\"<video "
+					   	    + "id='alert' "
+					   	    + "width='480' " 
+					   	    + "height='270' "
+					   	    + "src='/media/toadette.webm' "
+					   	    + "type='video/webm'"
+					   	    + "></video>\"";
+	    			break;
+	    		}
+	    	break;
+	    	case 'channel.cheer':
+	    		console.log('cheer');
+	    		username = data['display-name'];
+	    		bits = data.event.bits;
+	    		if (bits >= 2000){
+    				media = "\"<audio "
+    					+"id='alert' "
+    					+"src='/media/cheer_5000.mp4' "
+    					+"type='video/mp4' "
+    					+"> </audio>";
+    			} else if (bits <2000 && bits >= 1500){
+    				media = "\"<audio "
+    					+"id='alert' "
+    					+"src='/media/cheer_4000.mp4' "
+    					+"type='video/mp4' "
+    					+"> </audio>";
+    			} else if (bits < 1500 && bits >= 1000){
+    				media = "\"<audio "
+    					+"id='alert' "
+    					+"src='/media/cheer_2000.mp4' "
+    					+"type='video/mp4' "
+    					+"> </audio>";
+    			} else if (bits < 1000 && bits >= 500){
+    				media = "\"<audio "
+    					+"id='alert' "
+    					+"src='/media/cheer_1000.mp4' "
+    					+"type='video/mp4' "
+    					+"> </audio>";
+    			} else if (bits < 500 && bits >= 100){
+    				media = "\"<audio "
+    					+"id='alert' "
+    					+"src='/media/cheer_100.mp4' "
+    					+"type='audio/wav' "
+    					+"> </audio>";
+    			} else {
+    				media = "\"<audio "
+    					+"id='alert' "
+    					+"src='/media/cheer_default.wav' "
+    					+"type='audio/wav' "
+    					+"> </audio>";		
+	    		}
+	    		media += "<p>"+username+" has cheered "+data.event.bits+" bits!</p>"
+    					+"<p>"+data['message']+"</p>";
 	    	break;
 	    	case 'checkout.session.completed':
 	    		console.log('stripe donation!');
@@ -367,6 +512,10 @@ app.post('/webhooks',(req,res) => {
 
 io.on('connection', (socket) => {
   console.log('a user connected');
+  socket.on('add_message',(msg)=>{
+  	console.log('!add response');
+  	client.say('#mikodite_yvette',msg);
+  });
   socket.on('request_song',()=>{
 	console.log("Song Request");
 	let next = Math.floor(Math.random()*radio_list.length);
